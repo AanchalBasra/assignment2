@@ -1,70 +1,58 @@
-const fs = require('fs');
+const express = require('express');
+const app = express();
+const storeService = require('./store-service');
 
-let items = [];
-let categories = [];
+app.use(express.static('public'));
 
-function initialize() {
-  return new Promise((resolve, reject) => {
-    fs.readFile('./data/items.json', 'utf8', (err, itemsData) => {
-      if (err) {
-        reject('Unable to read items file');
-        return;
-      }
+app.get('/', (req, res) => {
+  res.redirect('/about');
+});
 
-      items = JSON.parse(itemsData);
+app.get('/about', (req, res) => {
+  res.sendFile(__dirname + '/views/about.html');
+});
 
-      fs.readFile('./data/categories.json', 'utf8', (err, categoriesData) => {
-        if (err) {
-          reject('Unable to read categories file');
-          return;
-        }
-
-        categories = JSON.parse(categoriesData);
-
-        resolve();
-      });
+app.get('/shop', (req, res) => {
+  storeService.getPublishedItems()
+    .then(publishedItems => {
+      res.json(publishedItems);
+    })
+    .catch(error => {
+      res.status(500).json({ error: 'Error retrieving published items' });
     });
+});
+
+app.get('/items', (req, res) => {
+  storeService.getAllItems()
+    .then(allItems => {
+      res.json(allItems);
+    })
+    .catch(error => {
+      res.status(500).json({ error: 'Error retrieving all items' });
+    });
+});
+
+app.get('/categories', (req, res) => {
+  storeService.getCategories()
+    .then(allCategories => {
+      res.json(allCategories);
+    })
+    .catch(error => {
+      res.status(500).json({ error: 'Error retrieving categories' });
+    });
+});
+
+app.use((req, res) => {
+  res.status(404).send('Page Not Found');
+});
+
+storeService.initialize()
+  .then(() => {
+    const port = process.env.PORT || 8080;
+    app.listen(port, () => {
+      console.log(`Express http server listening on port ${port}`);
+    });
+  })
+  .catch(error => {
+    console.error('Failed to initialize store service:', error);
   });
-}
-
-function getAllItems() {
-  return new Promise((resolve, reject) => {
-    if (items.length === 0) {
-      reject('No results returned');
-      return;
-    }
-
-    resolve(items);
-  });
-}
-
-function getPublishedItems() {
-  return new Promise((resolve, reject) => {
-    const publishedItems = items.filter(item => item.published === true);
-
-    if (publishedItems.length === 0) {
-      reject('No results returned');
-      return;
-    }
-
-    resolve(publishedItems);
-  });
-}
-
-function getCategories() {
-  return new Promise((resolve, reject) => {
-    if (categories.length === 0) {
-      reject('No results returned');
-      return;
-    }
-
-    resolve(categories);
-  });
-}
-
-module.exports = {
-  initialize,
-  getAllItems,
-  getPublishedItems,
-  getCategories
-};
