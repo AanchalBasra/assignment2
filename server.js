@@ -4,7 +4,6 @@ const app = express();
 // Serve static files from the "public" directory
 app.use(express.static('public'));
 
-// Redirect "/" to "/about"
 app.get('/', (req, res) => {
   res.redirect('/about');
 });
